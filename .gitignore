@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+credentials.json
+data/vector_store/
+data/models/
+*.log
