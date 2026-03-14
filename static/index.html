@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intcore HR Agent System</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0b0f;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      background: #111318;
+      border-right: 1px solid #1e2130;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid #1e2130;
+    }
+    .sidebar-logo h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.2px;
+    }
+    .sidebar-logo p {
+      font-size: 11px;
+      color: #4b5563;
+      margin-top: 2px;
+    }
+
+    .sidebar-section {
+      padding: 16px 14px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: #374151;
+      text-transform: uppercase;
+    }
+
+    .sheet-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      font-size: 13px;
+      color: #6b7280;
+      cursor: pointer;
+      border-radius: 6px;
+      margin: 1px 6px;
+      transition: all 0.15s;
+    }
+    .sheet-item:hover { background: #1a1d27; color: #c9d1d9; }
+    .sheet-item.active { background: #1e2235; color: #818cf8; }
+    .sheet-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .sidebar-actions {
+      margin-top: auto;
+      padding: 12px 8px;
+      border-top: 1px solid #1e2130;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sidebar-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: none;
+      border: none;
+      color: #4b5563;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.15s;
+      text-align: left;
+      width: 100%;
+    }
+    .sidebar-btn:hover { background: #1a1d27; color: #9ca3af; }
+    .sidebar-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* ── Main chat area ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: #0d0e14;
+      border-bottom: 1px solid #1e2130;
+      flex-shrink: 0;
+    }
+    .topbar-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #c9d1d9;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #111318;
+      border: 1px solid #1e2130;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      color: #4b5563;
+    }
+    .status-badge.online { color: #22c55e; border-color: #14532d; background: #052e16; }
+    #status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #374151;
+      flex-shrink: 0;
+    }
+    #status-dot.online { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+
+    /* ── Messages ── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scroll-behavior: smooth;
+    }
+
+    /* ── Empty / welcome state ── */
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .welcome-icon {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #312e81, #1e3a8a);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 8px;
+      box-shadow: 0 0 30px #4f46e540;
+    }
+    #empty-state h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+    #empty-state p {
+      font-size: 13px;
+      color: #4b5563;
+      max-width: 360px;
+      line-height: 1.6;
+    }
+    .suggestions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 560px;
+    }
+    .suggestion {
+      background: #111318;
+      border: 1px solid #1e2130;
+      color: #6b7280;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      line-height: 1.4;
+    }
+    .suggestion:hover {
+      background: #1a1d27;
+      color: #c9d1d9;
+      border-color: #4f46e5;
+      transform: translateY(-1px);
+    }
+    .suggestion strong {
+      display: block;
+      font-size: 11px;
+      color: #374151;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Message rows ── */
+    .msg-row { display: flex; flex-direction: column; }
+    .msg-row.user { align-items: flex-end; margin-top: 10px; }
+    .msg-row.assistant { align-items: flex-start; margin-top: 10px; }
+
+    .msg-meta {
+      font-size: 11px;
+      color: #374151;
+      margin-bottom: 4px;
+      padding: 0 4px;
+    }
+
+    .bubble {
+      padding: 11px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      max-width: min(680px, 80%);
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .msg-row.user .bubble {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 12px #4f46e530;
+    }
+    .msg-row.assistant .bubble {
+      background: #111318;
+      color: #c9d1d9;
+      border: 1px solid #1e2130;
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Typing */
+    .typing-bubble {
+      background: #111318;
+      border: 1px solid #1e2130;
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      padding: 14px 18px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      background: #374151;
+      border-radius: 50%;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse {
+      0%, 60%, 100% { transform: translateY(0); background: #374151; }
+      30% { transform: translateY(-5px); background: #6366f1; }
+    }
+
+    /* ── Input area ── */
+    .input-wrap {
+      padding: 16px 24px 20px;
+      background: #0d0e14;
+      border-top: 1px solid #1e2130;
+      flex-shrink: 0;
+    }
+    .input-inner {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      background: #111318;
+      border: 1px solid #1e2130;
+      border-radius: 14px;
+      padding: 8px 8px 8px 16px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-inner:focus-within {
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px #4f46e518;
+    }
+    #input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #e2e8f0;
+      font-size: 14px;
+      resize: none;
+      max-height: 120px;
+      min-height: 26px;
+      line-height: 1.6;
+      outline: none;
+      font-family: inherit;
+      padding: 4px 0;
+    }
+    #input::placeholder { color: #374151; }
+    #send-btn {
+      background: #4f46e5;
+      border: none;
+      color: #fff;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    #send-btn:hover:not(:disabled) {
+      background: #4338ca;
+      transform: scale(1.05);
+    }
+    #send-btn:disabled { background: #1e2130; color: #374151; cursor: not-allowed; transform: none; }
+    .input-hint {
+      font-size: 11px;
+      color: #1f2937;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Scrollbar */
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: #1e2130; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Intcore HR Agent</h1>
+    <p>Powered by Llama 3.3 · Groq</p>
+  </div>
+
+  <div class="sidebar-section">Data Sources</div>
+  <div id="sheet-list">
+    <div class="sheet-item active" data-sheet="">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+      </svg>
+      All Sheets
+    </div>
+  </div>
+
+  <div class="sidebar-actions">
+    <button class="sidebar-btn" onclick="reindex()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25
+             8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+      </svg>
+      Reload Sheet Data
+    </button>
+    <button class="sidebar-btn" onclick="clearHistory()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0
+             2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898
+             0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      </svg>
+      Clear Conversation
+    </button>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="current-sheet-label">All Sheets</span>
+    <div class="status-badge" id="status-badge">
+      <span id="status-dot"></span>
+      <span id="status-text">Connecting...</span>
+    </div>
+  </div>
+
+  <div id="messages">
+    <div id="empty-state">
+      <div class="welcome-icon">🤖</div>
+      <h2>How can I help you?</h2>
+      <p>Ask questions about employee salaries, vacation policies, or company information from Intcore's HR data.</p>
+      <div class="suggestions">
+        <div class="suggestion" onclick="useSuggestion(this)">
+          <strong>Salaries</strong>What is Ahmed Hassan's salary?
+        </div>
+        <div class="suggestion" onclick="useSuggestion(this)">
+          <strong>Vacation</strong>How many days off does Sara Mohamed have?
+        </div>
+        <div class="suggestion" onclick="useSuggestion(this)">
+          <strong>Policy</strong>What is Intcore's data retention policy?
+        </div>
+        <div class="suggestion" onclick="useSuggestion(this)">
+          <strong>Compare</strong>Who earns more than $7000 per month?
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-wrap">
+    <div class="input-inner">
+      <textarea id="input" placeholder="Ask anything about your HR data…" rows="1"></textarea>
+      <button id="send-btn" onclick="sendMessage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010
+                   1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 19.5 19.5 0 0018-18
+                   .75.75 0 00-.942-.928L3.478 2.405z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-hint">Enter to send · Shift+Enter for new line</div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:8000';
+  let isLoading = false;
+  let activeSheet = '';
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  async function init() {
+    try {
+      const res = await fetch(`${API}/health`);
+      const data = await res.json();
+      setStatus(true, `${data.index_size} chunks ready`);
+    } catch {
+      setStatus(false, 'Offline');
+    }
+    loadSheets();
+  }
+
+  function setStatus(online, text) {
+    const dot = document.getElementById('status-dot');
+    const badge = document.getElementById('status-badge');
+    const label = document.getElementById('status-text');
+    dot.className = online ? 'online' : '';
+    badge.className = online ? 'status-badge online' : 'status-badge';
+    label.textContent = text;
+  }
+
+  async function loadSheets() {
+    try {
+      const res = await fetch(`${API}/sheets`);
+      const data = await res.json();
+      const list = document.getElementById('sheet-list');
+      data.sheet_names.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'sheet-item';
+        item.dataset.sheet = name;
+        item.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375
+                 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-3.75.125v-1c0-.621.504-1.125
+                 1.125-1.125m0 0h1.5m-1.5 0c-.621 0-1.125.504-1.125 1.125m1.125-1.125V9.75
+                 M3.375 7.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125V4.875
+                 C2.25 4.254 2.754 3.75 3.375 3.75h17.25c.621 0 1.125.504 1.125
+                 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h1.5m-1.5 0c-.621
+                 0-1.125.504-1.125 1.125V15m1.125-7.5h15.75"/>
+          </svg>
+          ${name}`;
+        item.onclick = () => selectSheet(item, name);
+        list.appendChild(item);
+      });
+    } catch {}
+  }
+
+  function selectSheet(el, name) {
+    document.querySelectorAll('.sheet-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    activeSheet = name;
+    document.getElementById('current-sheet-label').textContent = name || 'All Sheets';
+  }
+
+  // ── Send message ───────────────────────────────────────────────────────────
+  async function sendMessage() {
+    const input = document.getElementById('input');
+    const question = input.value.trim();
+    if (!question || isLoading) return;
+
+    hideEmptyState();
+    appendMessage('user', question);
+    input.value = '';
+    input.style.height = 'auto';
+
+    const typingEl = appendTyping();
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API}/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, show_sources: false, remember_history: true }),
+      });
+
+      typingEl.remove();
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = null; }
+
+      if (!res.ok) {
+        const msg = data?.detail || data?.error?.message || text || 'Something went wrong.';
+        appendMessage('assistant', `⚠ ${msg}`);
+      } else {
+        appendMessage('assistant', data.answer);
+      }
+    } catch {
+      typingEl.remove();
+      appendMessage('assistant', '⚠ Could not reach the server. Make sure the app is running on port 8000.');
+    }
+
+    setLoading(false);
+  }
+
+  // ── DOM helpers ────────────────────────────────────────────────────────────
+  function hideEmptyState() {
+    const el = document.getElementById('empty-state');
+    if (el) el.remove();
+  }
+
+  function appendMessage(role, text) {
+    const container = document.getElementById('messages');
+    const row = document.createElement('div');
+    row.className = `msg-row ${role}`;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+
+    row.appendChild(bubble);
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+    return row;
+  }
+
+  function appendTyping() {
+    const container = document.getElementById('messages');
+    const row = document.createElement('div');
+    row.className = 'msg-row assistant';
+    row.innerHTML = `<div class="typing-bubble">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>`;
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+    return row;
+  }
+
+  function setLoading(val) {
+    isLoading = val;
+    document.getElementById('send-btn').disabled = val;
+    document.getElementById('input').disabled = val;
+  }
+
+  function useSuggestion(el) {
+    const text = el.innerText.split('\n').pop().trim();
+    document.getElementById('input').value = text;
+    sendMessage();
+  }
+
+  // ── Sidebar actions ────────────────────────────────────────────────────────
+  async function reindex() {
+    const btn = event.currentTarget;
+    btn.style.color = '#6366f1';
+    try {
+      const res = await fetch(`${API}/index`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheet_name: activeSheet || null, force_reindex: true }),
+      });
+      const data = await res.json();
+      setStatus(true, `${data.chunk_count} chunks ready`);
+    } catch {
+      setStatus(false, 'Reindex failed');
+    }
+    setTimeout(() => btn.style.color = '', 1500);
+  }
+
+  async function clearHistory() {
+    try {
+      await fetch(`${API}/history`, { method: 'DELETE' });
+      const container = document.getElementById('messages');
+      container.innerHTML = `
+        <div id="empty-state" style="flex:1;display:flex;flex-direction:column;
+          align-items:center;justify-content:center;gap:8px;text-align:center;padding:40px">
+          <p style="font-size:13px;color:#374151;">Conversation cleared. Ask a new question.</p>
+        </div>`;
+    } catch {}
+  }
+
+  // ── Textarea auto-resize ───────────────────────────────────────────────────
+  const input = document.getElementById('input');
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  init();
+</script>
+</body>
+</html>
