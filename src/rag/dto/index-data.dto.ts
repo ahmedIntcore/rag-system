@@ -1,35 +1,27 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+// Implements spec: components/schemas/IndexRequest
+// All fields are optional (spec has no "required" list for this schema).
+
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import type { IndexRequest } from '../../common/types';
 
-export class IndexDataDto {
-  @ApiPropertyOptional({
-    description: 'Google Sheets worksheet tab name. Leave empty for the first sheet.',
-    example: 'Sheet1',
-  })
+export class IndexDataDto implements IndexRequest {
   @IsString()
   @IsOptional()
-  sheetName?: string;
+  sheetName?: string | null; // spec: nullable: true
 
-  @ApiPropertyOptional({
-    description: 'Google Drive folder ID to index documents from.',
-    example: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms',
-  })
   @IsString()
   @IsOptional()
-  driveFolderId?: string;
+  driveFolderId?: string | null; // spec: nullable: true
 
-  @ApiPropertyOptional({ description: 'Include Google Sheets data in the index', default: true })
   @IsBoolean()
   @IsOptional()
-  includeSheets?: boolean = true;
+  includeSheets?: boolean = true; // spec: default: true
 
-  @ApiPropertyOptional({ description: 'Include Google Drive documents in the index', default: false })
   @IsBoolean()
   @IsOptional()
-  includeDrive?: boolean = false;
+  includeDrive?: boolean = false; // spec: default: false
 
-  @ApiPropertyOptional({ description: 'Rebuild index from scratch even if a saved index exists', default: true })
   @IsBoolean()
   @IsOptional()
-  forceReindex?: boolean = true;
+  forceReindex?: boolean = true; // spec: default: true
 }

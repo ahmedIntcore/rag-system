@@ -1,0 +1,501 @@
+openapi: 3.0.3
+
+# =============================================================
+# spec/openapi.yaml — API Contract (Source of Truth)
+#
+# WHAT IS SPEC-DRIVEN DEVELOPMENT?
+#   In spec-driven (API-first) development, you write the API
+#   contract FIRST — before any code. The spec defines:
+#     - Every endpoint (URL + HTTP method)
+#     - Every request body (fields, types, validation rules)
+#     - Every response (shape, status codes)
+#     - Every error response
+#
+#   The code then IMPLEMENTS this contract. The spec is never
+#   generated from the code — it IS the design document.
+#
+# WHY SPEC-FIRST?
+#   ✓ Frontend and backend teams can work in parallel
+#   ✓ The spec is the documentation (always accurate)
+#   ✓ You can validate both requests AND responses against the spec
+#   ✓ Client SDKs can be auto-generated from the spec
+#   ✓ Easier to spot design problems before writing code
+#
+# HOW TO USE THIS FILE:
+#   - swagger-ui-express serves it at /docs
+#   - The NestJS app validates incoming requests against it
+#   - TypeScript types in src/common/types.ts are derived from schemas
+#
+# FORMAT: OpenAPI 3.0.3 (industry standard, supported by all tools)
+# =============================================================
+
+info:
+  title: RAG System — Google Sheets & Drive Q&A
+  version: 1.0.0
+  description: |
+    A **Retrieval-Augmented Generation (RAG)** API built with NestJS.
+
+    Answers questions based on data from Google Sheets and Google Drive,
+    powered by Claude AI.
+
+    ## How it works
+    1. Data from Google Sheets/Drive is indexed (converted to embeddings)
+    2. When you ask a question, similar chunks are retrieved
+    3. Claude generates an answer grounded in that data
+
+    ## Quick start
+    1. `POST /data/index` — build the index from your data
+    2. `POST /ask` — ask questions!
+
+    ## Spec-driven development
+    This API was designed **spec-first**: this YAML file was written before
+    any code. The implementation must match this contract exactly.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: RAG
+    description: Ask questions and manage conversation history
+  - name: Data
+    description: Index and manage data sources (Sheets + Drive)
+  - name: System
+    description: Health and status endpoints
+
+# =============================================================
+# PATHS — All API Endpoints
+# =============================================================
+paths:
+
+  # ------------------------------------------------------------
+  # Root
+  # ------------------------------------------------------------
+  /:
+    get:
+      tags: [System]
+      summary: API root — quick info
+      operationId: getRoot
+      responses:
+        '200':
+          description: Server is running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RootResponse'
+
+  # ------------------------------------------------------------
+  # Health
+  # ------------------------------------------------------------
+  /health:
+    get:
+      tags: [System]
+      summary: Check server health and index status
+      operationId: getHealth
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                indexSize: 120
+                model: Xenova/all-MiniLM-L6-v2
+
+  # ------------------------------------------------------------
+  # Ask a Question
+  # ------------------------------------------------------------
+  /ask:
+    post:
+      tags: [RAG]
+      summary: Ask a question about your data
+      operationId: askQuestion
+      description: |
+        Embeds your question, retrieves the most relevant chunks from the
+        index, and asks Claude to generate an answer using those chunks as context.
+
+        Set `rememberHistory: true` for multi-turn conversations where
+        Claude remembers previous questions in the same session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+            example:
+              question: What products are available in the Electronics category?
+              rememberHistory: true
+              showSources: true
+              topK: 5
+      responses:
+        '200':
+          description: Answer generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/IndexNotReady'
+
+  # ------------------------------------------------------------
+  # Conversation History
+  # ------------------------------------------------------------
+  /history:
+    delete:
+      tags: [RAG]
+      summary: Clear conversation history
+      operationId: clearHistory
+      description: |
+        Resets the conversation so Claude stops referencing previous questions.
+        Use this when changing topics or starting a new session.
+      responses:
+        '200':
+          description: History cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Conversation history cleared.
+
+  # ------------------------------------------------------------
+  # Index Data
+  # ------------------------------------------------------------
+  /data/index:
+    post:
+      tags: [Data]
+      summary: Build or rebuild the vector index
+      operationId: indexData
+      description: |
+        Loads data from Google Sheets and/or Google Drive, splits it into
+        chunks, generates embeddings, and saves the index to disk.
+
+        Call this after updating your spreadsheet or Drive documents to
+        make the new data available for questions.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndexRequest'
+            examples:
+              sheets_only:
+                summary: Index the first sheet
+                value:
+                  includeSheets: true
+                  forceReindex: true
+              specific_sheet:
+                summary: Index a named worksheet
+                value:
+                  sheetName: Products
+                  includeSheets: true
+                  forceReindex: true
+              sheets_and_drive:
+                summary: Index Sheets + Drive documents
+                value:
+                  includeSheets: true
+                  includeDrive: true
+                  forceReindex: true
+      responses:
+        '200':
+          description: Index built successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndexResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ------------------------------------------------------------
+  # List Sheets
+  # ------------------------------------------------------------
+  /data/sheets:
+    get:
+      tags: [Data]
+      summary: List all worksheet tab names
+      operationId: listSheets
+      description: |
+        Returns the names of all worksheet tabs in the connected Google
+        Spreadsheet. Use these names with the `sheetName` field in POST /data/index.
+      responses:
+        '200':
+          description: List of sheet names
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SheetsResponse'
+              example:
+                sheetNames:
+                  - Sheet1
+                  - Products
+                  - FAQ
+        '502':
+          $ref: '#/components/responses/GoogleApiError'
+
+  # ------------------------------------------------------------
+  # Backup Index to Drive
+  # ------------------------------------------------------------
+  /data/backup:
+    post:
+      tags: [Data]
+      summary: Back up the current index to Google Drive
+      operationId: backupIndex
+      description: |
+        Serialises the in-memory vector store as JSON and uploads it to
+        the configured Google Drive folder as `rag-index-backup.json`.
+
+        Useful for persisting the index across server restarts without
+        having to re-embed all data from scratch.
+      responses:
+        '200':
+          description: Backup complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupResponse'
+        '502':
+          $ref: '#/components/responses/GoogleApiError'
+
+  # ------------------------------------------------------------
+  # Restore Index from Drive
+  # ------------------------------------------------------------
+  /data/restore:
+    post:
+      tags: [Data]
+      summary: Restore the index from a Google Drive backup
+      operationId: restoreIndex
+      description: |
+        Downloads `rag-index-backup.json` from Google Drive and loads it
+        into memory, replacing the current index.
+      responses:
+        '200':
+          description: Restore result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreResponse'
+        '502':
+          $ref: '#/components/responses/GoogleApiError'
+
+# =============================================================
+# COMPONENTS — Reusable Schemas, Responses, Parameters
+# =============================================================
+components:
+
+  # -------------------------------------------------------
+  # SCHEMAS — Data shapes (request bodies & response bodies)
+  # -------------------------------------------------------
+  schemas:
+
+    # --- Requests ---
+
+    AskRequest:
+      type: object
+      required:
+        - question
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The question to ask about the data
+          example: What products are in the Electronics category?
+        rememberHistory:
+          type: boolean
+          default: true
+          description: Include previous Q&A turns in the conversation context
+        showSources:
+          type: boolean
+          default: true
+          description: Include retrieved source chunks in the response
+        topK:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+          description: Number of source chunks to retrieve (more = richer context)
+
+    IndexRequest:
+      type: object
+      properties:
+        sheetName:
+          type: string
+          nullable: true
+          description: Worksheet tab name to index. Null means the first sheet.
+          example: Products
+        driveFolderId:
+          type: string
+          nullable: true
+          description: Google Drive folder ID to index documents from
+        includeSheets:
+          type: boolean
+          default: true
+          description: Index rows from Google Sheets
+        includeDrive:
+          type: boolean
+          default: false
+          description: Index documents from Google Drive
+        forceReindex:
+          type: boolean
+          default: true
+          description: Rebuild even if a saved index already exists
+
+    # --- Responses ---
+
+    AskResponse:
+      type: object
+      required: [question, answer, sources]
+      properties:
+        question:
+          type: string
+          description: The original question
+        answer:
+          type: string
+          description: Claude's answer grounded in the retrieved data
+        sources:
+          type: array
+          description: Retrieved chunks used as context
+          items:
+            $ref: '#/components/schemas/SourceChunk'
+
+    SourceChunk:
+      type: object
+      required: [text, score, metadata]
+      properties:
+        text:
+          type: string
+          description: The text content of this chunk
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Cosine similarity score (1.0 = identical meaning)
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Original row/document data from the data source
+
+    IndexResponse:
+      type: object
+      required: [message, chunkCount]
+      properties:
+        message:
+          type: string
+        chunkCount:
+          type: integer
+          description: Total number of chunks now in the index
+
+    HealthResponse:
+      type: object
+      required: [status, indexSize, model]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        indexSize:
+          type: integer
+          description: Number of chunks in the vector store
+        model:
+          type: string
+          description: Embedding model in use
+
+    SheetsResponse:
+      type: object
+      required: [sheetNames]
+      properties:
+        sheetNames:
+          type: array
+          items:
+            type: string
+
+    BackupResponse:
+      type: object
+      required: [message, driveFileId]
+      properties:
+        message:
+          type: string
+        driveFileId:
+          type: string
+          description: Google Drive file ID of the backup
+
+    RestoreResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        chunkCount:
+          type: integer
+          description: Number of chunks restored (only present on success)
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    RootResponse:
+      type: object
+      required: [message, docs, health]
+      properties:
+        message:
+          type: string
+        docs:
+          type: string
+        health:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        error:
+          type: string
+
+  # -------------------------------------------------------
+  # REUSABLE RESPONSES — Common error shapes
+  # -------------------------------------------------------
+  responses:
+
+    BadRequest:
+      description: Invalid request body (validation failed)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 400
+            message: question must not be shorter than 1 characters
+            error: Bad Request
+
+    IndexNotReady:
+      description: Vector index is empty — call POST /data/index first
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 503
+            message: Index is empty. Call POST /data/index first.
+            error: Service Unavailable
+
+    GoogleApiError:
+      description: Google API error (credentials or network issue)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            statusCode: 502
+            message: Failed to connect to Google Sheets API
+            error: Bad Gateway

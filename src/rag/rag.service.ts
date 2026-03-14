@@ -21,8 +21,9 @@ import { SheetsService } from '../google/sheets.service';
 import { DriveService } from '../google/drive.service';
 import { EmbeddingsService } from '../embeddings/embeddings.service';
 import { VectorStoreService, SearchResult } from '../vector-store/vector-store.service';
-import { AskQuestionDto, AskResponseDto } from './dto/ask-question.dto';
+import { AskQuestionDto } from './dto/ask-question.dto';
 import { IndexDataDto } from './dto/index-data.dto';
+import type { AskResponse, IndexResponse } from '../common/types';
 
 const CLAUDE_MODEL = 'claude-opus-4-6';
 const CHUNK_SIZE = 800;
@@ -71,7 +72,7 @@ export class RagService implements OnModuleInit {
   /**
    * Builds (or rebuilds) the vector index from Google Sheets and/or Drive.
    */
-  async indexData(dto: IndexDataDto): Promise<{ message: string; chunkCount: number }> {
+  async indexData(dto: IndexDataDto): Promise<IndexResponse> {
     const {
       sheetName,
       driveFolderId,
@@ -150,7 +151,7 @@ export class RagService implements OnModuleInit {
   /**
    * Answers a question using RAG: retrieve relevant chunks → send to Claude.
    */
-  async ask(dto: AskQuestionDto): Promise<AskResponseDto> {
+  async ask(dto: AskQuestionDto): Promise<AskResponse> {
     if (this.vectorStoreService.size === 0) {
       throw new ServiceUnavailableException(
         'Index is empty. Call POST /data/index first to build the index.',
